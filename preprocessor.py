@@ -3,8 +3,11 @@ Reads from a MongoDB database and writes cleaned input to a new collection
 called 'filtered_collection'.
 Performs the pre-processing step for topic modeling.
 """
+# from BeautifulSoup import BeautifulSoup
 from pymongo import MongoClient
+from urlparse import urlparse
 import justext
+import lxml
 import nltk
 
 
@@ -17,33 +20,64 @@ class MongoDBLoader:
                     'MONGODB_DB': "ecosystem_mapping",
                     'MONGODB_FILTERED_COLLECTION': "filtered_collection",
                     'MONGODB_HTML_COLLECTION': "html_collection",
+                    'MONGODB_LINK_COLLECTION': "link_collection",
                     'MONGODB_TEXT_COLLECTION': "text_collection"}
         connection = MongoClient(
             settings['MONGODB_SERVER'],
             settings['MONGODB_PORT']
         )
         self.db = connection[settings['MONGODB_DB']]
-        self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
         self.filtered_collection = self.db[settings['MONGODB_FILTERED_COLLECTION']]
+        self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
+        self.link_collection = self.db[settings['MONGODB_LINK_COLLECTION']]
 
     def load_save(self):
         """Loads in from MongoDB and saves to MySQL."""
         base_urls = self.html_collection.distinct("base_url")
         
         for base_url in base_urls:
-            print("Cleaning input from URL: %s" % base_url)
-            tier = float('inf')
+            print("Processing URL: %s" % base_url)
             for data in self.html_collection.find({"base_url": base_url}):
+
+                source = data['src_url']
+                # source = data['url']
                 text = self.clean(data['body'])
-                tier = min(tier, data['tier'])
-                url = data['url']
+                tier = data['tier']
+                time = data['timestamp']
+
+                # Apparently, lxml is faster than BeautifulSoup.
+                # soup = BeautifulSoup(data['body'])
+                # links = [link for link in [x.get('href') for x in soup.findAll('a')]
+                #             if link and urlparse(link).netloc != base_url]
+
+                try:
+                    dom =  lxml.html.fromstring(data['body'])
+                    links = [link for link in dom.xpath('//a/@href')
+                        if link and 'http' in link and urlparse(link).netloc != base_url]
+                except ValueError:
+                    print("ERROR: Did not parse %s." % source)
+                    continue
+
+                # print(base_url, links)
+
+                link_item = {
+                    "base_url": base_url,
+                    "dst_url": links,
+                    "src_url": source,
+                    "tier": tier,
+                    "timestamp": time
+                }
+
                 text_item = {
                     "base_url": base_url,
+                    "src_url": source,
                     "text": text,
                     "tier": tier,
-                    "url": url
+                    "timestamp": time
                 }
+
                 self.filtered_collection.insert_one(text_item)
+                self.link_collection.insert_one(link_item)
 
     def clean(self, text):
         """
