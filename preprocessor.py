@@ -5,6 +5,7 @@ Performs the pre-processing step for topic modeling.
 """
 from pymongo import MongoClient
 import justext
+import nltk
 
 
 class MongoDBLoader:
@@ -28,6 +29,7 @@ class MongoDBLoader:
     def load_save(self):
         """Loads in from MongoDB and saves to MySQL."""
         base_urls = self.html_collection.distinct("base_url")
+        
         for base_url in base_urls:
             print("Cleaning input from URL: %s" % base_url)
             tier = float('inf')
@@ -48,16 +50,34 @@ class MongoDBLoader:
         Cleans HTML text by removing boilerplates and filtering unnecessary
         words, e.g. geographical and date/time snippets.
         """
+
+        text = self.remove_boilerplate(text)
+        text = self.remove_named_entity(text)
+        return text
+    
+    def remove_named_entity(self, text):
+        _text = list()
+        for idx, sent in enumerate(nltk.sent_tokenize(text)):
+            for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary = True):
+                #if hasattr(chunk, 'lab'):
+                if type(chunk) is not nltk.Tree:
+                    word, pos = chunk
+                    # if pos == " "  for further removal
+                    _text.append(word)
+                else:
+                    #ne = ' '.join(c[0] for c in chunk.leaves())
+                    #self.named_entities.append(ne)
+                    continue
+        return ' '.join(_text)
+
+    def remove_boilerplate(self, text):
         jtext = justext.justext(text, justext.get_stoplist("English"))
         cleaned = [line.text for line in jtext if not line.is_boilerplate]
         cleaned_text = " ".join(cleaned) if cleaned else ""
-
-        # TODO: Insert more filters.
-
-        return self.filter_document(cleaned_text)
+        return cleaned_text
 
     def filter_document(self, text):
-        # TODO: Add filtering
+        # Deprecated
 
         # filtered = []
         # custom_stopwords = ['div']
@@ -66,7 +86,8 @@ class MongoDBLoader:
         #         filtered.append(word)
         # return " ".join(filtered)
 
-        return text
+        #return text
+        pass
 
-
-MongoDBLoader().load_save()
+if __name__ == "__main__":
+    MongoDBLoader().load_save()
