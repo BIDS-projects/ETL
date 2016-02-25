@@ -34,10 +34,12 @@ class MongoDBLoader:
             for data in self.html_collection.find({"base_url": base_url}):
                 text = self.clean(data['body'])
                 tier = min(tier, data['tier'])
+                url = data['url']
                 text_item = {
                     "base_url": base_url,
                     "text": text,
-                    "tier": tier
+                    "tier": tier,
+                    "url": url
                 }
                 self.filtered_collection.insert_one(text_item)
 
