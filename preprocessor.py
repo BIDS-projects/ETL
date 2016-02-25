@@ -3,8 +3,11 @@ Reads from a MongoDB database and writes cleaned input to a new collection
 called 'filtered_collection'.
 Performs the pre-processing step for topic modeling.
 """
+# from BeautifulSoup import BeautifulSoup
 from pymongo import MongoClient
+from urlparse import urlparse
 import justext
+import lxml
 
 
 class MongoDBLoader:
@@ -34,16 +37,30 @@ class MongoDBLoader:
             print("Processing URL: %s" % base_url)
             for data in self.html_collection.find({"base_url": base_url}):
 
-                external_links = data['dst_url']
                 source = data['src_url']
+                # source = data['url']
                 text = self.clean(data['body'])
                 tier = data['tier']
                 time = data['timestamp']
-                url = data['url']
+
+                # Apparently, lxml is faster than BeautifulSoup.
+                # soup = BeautifulSoup(data['body'])
+                # links = [link for link in [x.get('href') for x in soup.findAll('a')]
+                #             if link and urlparse(link).netloc != base_url]
+
+                try:
+                    dom =  lxml.html.fromstring(data['body'])
+                    links = [link for link in dom.xpath('//a/@href')
+                        if link and 'http' in link and urlparse(link).netloc != base_url]
+                except ValueError:
+                    print("ERROR: Did not parse %s." % source)
+                    continue
+
+                # print(base_url, links)
 
                 link_item = {
                     "base_url": base_url,
-                    "dst_url": external_links,
+                    "dst_url": links,
                     "src_url": source,
                     "tier": tier,
                     "timestamp": time
@@ -51,7 +68,7 @@ class MongoDBLoader:
 
                 text_item = {
                     "base_url": base_url,
-                    "src_url": url,
+                    "src_url": source,
                     "text": text,
                     "tier": tier,
                     "timestamp": time
