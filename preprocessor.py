@@ -16,32 +16,49 @@ class MongoDBLoader:
                     'MONGODB_DB': "ecosystem_mapping",
                     'MONGODB_FILTERED_COLLECTION': "filtered_collection",
                     'MONGODB_HTML_COLLECTION': "html_collection",
+                    'MONGODB_LINK_COLLECTION': "link_collection",
                     'MONGODB_TEXT_COLLECTION': "text_collection"}
         connection = MongoClient(
             settings['MONGODB_SERVER'],
             settings['MONGODB_PORT']
         )
         self.db = connection[settings['MONGODB_DB']]
-        self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
         self.filtered_collection = self.db[settings['MONGODB_FILTERED_COLLECTION']]
+        self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
+        self.link_collection = self.db[settings['MONGODB_LINK_COLLECTION']]
 
     def load_save(self):
         """Loads in from MongoDB and saves to MySQL."""
         base_urls = self.html_collection.distinct("base_url")
         for base_url in base_urls:
-            print("Cleaning input from URL: %s" % base_url)
-            tier = float('inf')
+            print("Processing URL: %s" % base_url)
             for data in self.html_collection.find({"base_url": base_url}):
+
+                external_links = data['dst_url']
+                source = data['src_url']
                 text = self.clean(data['body'])
-                tier = min(tier, data['tier'])
+                tier = data['tier']
+                time = data['timestamp']
                 url = data['url']
+
+                link_item = {
+                    "base_url": base_url,
+                    "dst_url": external_links,
+                    "src_url": source,
+                    "tier": tier,
+                    "timestamp": time
+                }
+
                 text_item = {
                     "base_url": base_url,
+                    "src_url": url,
                     "text": text,
                     "tier": tier,
-                    "url": url
+                    "timestamp": time
                 }
+
                 self.filtered_collection.insert_one(text_item)
+                self.link_collection.insert_one(link_item)
 
     def clean(self, text):
         """
