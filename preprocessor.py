@@ -39,8 +39,8 @@ class MongoDBLoader:
             print("Processing URL: %s" % base_url)
             for data in self.html_collection.find({"base_url": base_url}):
 
-                source = data['src_url']
-                # source = data['url']
+                # source = data['src_url']
+                source = data['url']
                 text = self.clean(data['body'])
                 tier = data['tier']
                 time = data['timestamp']
@@ -90,19 +90,20 @@ class MongoDBLoader:
         return text
     
     def remove_named_entity(self, text):
-        _text = list()
-        for idx, sent in enumerate(nltk.sent_tokenize(text)):
-            for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary = True):
-                #if hasattr(chunk, 'lab'):
-                if type(chunk) is not nltk.Tree:
-                    word, pos = chunk
-                    # if pos == " "  for further removal
-                    _text.append(word)
-                else:
-                    #ne = ' '.join(c[0] for c in chunk.leaves())
-                    #self.named_entities.append(ne)
-                    continue
-        return ' '.join(_text)
+        # _text = list()
+        # for idx, sent in enumerate(nltk.sent_tokenize(text)):
+        #     for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary = True):
+        #         #if hasattr(chunk, 'lab'):
+        #         if type(chunk) is not nltk.Tree:
+        #             word, pos = chunk
+        #             # if pos == " "  for further removal
+        #             _text.append(word)
+        #         else:
+        #             #ne = ' '.join(c[0] for c in chunk.leaves())
+        #             #self.named_entities.append(ne)
+        #             continue
+        # return ' '.join(_text)
+        return text
 
     def remove_boilerplate(self, text):
         jtext = justext.justext(text, justext.get_stoplist("English"))
