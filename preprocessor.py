@@ -70,9 +70,13 @@ class MongoDBLoader:
                     continue
 
                 if self.options['--all'] or self.options['--link']:
-                    LinkItem(base_url=bytes(base_url, 'utf-8'),
-                        links=links,
-                        src_url=bytes(src_url, 'utf-8')
+                    # import pdb; pdb.set_trace()
+                    link_string = ""
+                    for link in links:
+                        link_string += link
+                    LinkItem(base_url=bytes(base_url),
+                        links=link_string,
+                        src_url=bytes(src_url)
                     ).save()
 
                 if self.options['--all'] or self.options['--text']:
@@ -98,20 +102,20 @@ class MongoDBLoader:
         """
         Removes proper nouns (e.g. geographical locations).
         """
-        # _text = list()
-        # for idx, sent in enumerate(nltk.sent_tokenize(text)):
-        #     for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary=True):
-        #         # if hasattr(chunk, 'lab'):
-        #         if type(chunk) is not nltk.Tree:
-        #             word, pos = chunk
-        #             # if pos == " ": # for further removal
-        #             _text.append(word)
-        #         else:
-        #             # ne = ' '.join(c[0] for c in chunk.leaves())
-        #             # self.named_entities.append(ne)
-        #             continue
-        # return ' '.join(_text)
-        return text
+        _text = list()
+        for idx, sent in enumerate(nltk.sent_tokenize(text)):
+            for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary=True):
+                # if hasattr(chunk, 'lab'):
+                if type(chunk) is not nltk.Tree:
+                    word, pos = chunk
+                    # if pos == " ": # for further removal
+                    _text.append(word)
+                else:
+                    # ne = ' '.join(c[0] for c in chunk.leaves())
+                    # self.named_entities.append(ne)
+                    continue
+        return ' '.join(_text)
+        # return text
 
     def remove_boilerplate(self, text):
         """
