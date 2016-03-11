@@ -1,0 +1,4 @@
+pymongo
+jusText
+docopt
+pymysql
