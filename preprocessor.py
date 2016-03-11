@@ -13,9 +13,10 @@ Options:
     -l --link  Runs the link processor for visualization.
     -t --text  Runs the text processor for topic modeling.
 """
-from db import LinkItem, MySQL, MySQLConfig
+from db import LinkItem, MySQL, MySQLConfig, FromItem, ToItem
 from docopt import docopt
 from pymongo import MongoClient
+from sqlalchemy.orm import relationship
 from urlparse import urlparse
 import justext
 import lxml
@@ -71,13 +72,11 @@ class MongoDBLoader:
 
                 if self.options['--all'] or self.options['--link']:
                     # import pdb; pdb.set_trace()
-                    link_string = ""
+                    from_item = FromItem(base_url=bytes(base_url))
                     for link in links:
-                        link_string += link
-                    LinkItem(base_url=bytes(base_url),
-                        links=link_string,
-                        src_url=bytes(src_url)
-                    ).save()
+                        link = urlparse(link).netloc
+                        from_item.to_items.append(ToItem(base_url=link))
+                    from_item.save()
 
                 if self.options['--all'] or self.options['--text']:
                     text = self.clean(data['body'])

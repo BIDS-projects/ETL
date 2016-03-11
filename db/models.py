@@ -1,4 +1,5 @@
 from sqlalchemy.dialects import mysql
+from sqlalchemy.orm import relationship
 import sqlalchemy as sa
 import sqlalchemy.ext.declarative as sad
 
@@ -55,13 +56,43 @@ class MySQLBase(sad.declarative_base(), object):
         return self
 
 
-class LinkItem(MySQLBase):
+# class LinkItem(MySQLBase):
+#     """
+#     MySQL link object.
+#     """
+
+#     __tablename__ = 'links'
+
+#     base_url = sa.Column(sa.String(100))
+#     src_url = sa.Column(mysql.BLOB())
+#     links = sa.Column(sa.Text, nullable=False)
+
+class FromItem(MySQLBase):
     """
-    MySQL link object.
+    MySQL From object
     """
 
-    __tablename__ = 'links'
+    __tablename__ = 'fromitem'
 
-    base_url = sa.Column(sa.String(100))
-    src_url = sa.Column(mysql.BLOB())
-    links = sa.Column(sa.Text, nullable=False)
+    id = sa.Column(sa.Integer, primary_key=True)
+    base_url = sa.Column(mysql.BLOB())
+    to_items = relationship("ToItem", backref='fromitem', uselist=True)
+
+class ToItem(MySQLBase):
+    """
+    MySQL To object
+    """
+
+    __tablename__ = 'toitem'
+
+    id = sa.Column(sa.Integer, primary_key = True)
+    base_url = sa.Column(mysql.BLOB())
+    from_id = sa.Column(sa.Integer, sa.ForeignKey(FromItem.id), nullable=False)
+    from_item = relationship("FromItem", foreign_keys=[from_id])
+
+
+
+
+
+
+
