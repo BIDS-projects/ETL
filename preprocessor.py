@@ -44,8 +44,9 @@ class MongoDBLoader:
         self.filtered_collection = self.db[settings['MONGODB_FILTERED_COLLECTION']]
         self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
 
-        print("Setting up MySQL connection...")
-        self.mySQL = MySQL(config=MySQLConfig)
+        if self.options['--all'] or self.options['--link']:
+            print("Setting up MySQL connection...")
+            self.mySQL = MySQL(config=MySQLConfig)
 
     def load_save(self):
         """
