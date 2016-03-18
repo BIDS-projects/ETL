@@ -2,3 +2,4 @@ pymongo
 jusText
 docopt
 pymysql
+nltk
