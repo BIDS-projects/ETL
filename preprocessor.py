@@ -84,18 +84,20 @@ class MongoDBLoader:
         Cleans HTML text by removing boilerplates and filtering unnecessary
         words, e.g. geographical and date/time snippets.
         """
-
         text = self.remove_boilerplate(text)
         text = self.remove_named_entity(text)
         return text
-    
+
     def remove_named_entity(self, text):
         _text = list()
-        for sent in nltk.sent_tokenize(text):
-            for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary = True):
+
+        tok_sents = [nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(text)]
+        pos_sents = nltk.pos_tag_sents(tok_sents)
+        for pos_sent in pos_sents:
+            for chunk in nltk.ne_chunk(pos_sent):#, binary = True):
                 if type(chunk) is not nltk.Tree:
                     word, pos = chunk
-                    # if pos == " "  for further removal
+                    # if pos == " ":  for further removal
                     _text.append(word)
                 else:
                     #ne = ' '.join(c[0] for c in chunk.leaves())
