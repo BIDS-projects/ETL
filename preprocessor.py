@@ -55,7 +55,7 @@ class MongoDBLoader:
                     links = [link for link in dom.xpath('//a/@href')
                         if link and 'http' in link and urlparse(link).netloc != base_url]
                 except ValueError:
-                    print("ERROR: Did not parse %s." % source)
+                    print("ERROR: Did not parse %s" % source)
                     continue
 
                 # print(base_url, links)
