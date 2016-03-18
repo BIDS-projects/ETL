@@ -39,8 +39,8 @@ class MongoDBLoader:
             print("Processing URL: %s" % base_url)
             for data in self.html_collection.find({"base_url": base_url}):
 
-                source = data['src_url']
-                # source = data['url']
+                #source = data['src_url']
+                source = data['url']
                 text = self.clean(data['body'])
                 tier = data['tier']
                 time = data['timestamp']
