@@ -96,7 +96,7 @@ class MongoDBLoader:
         tok_sents = [nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(text)]
         pos_sents = nltk.pos_tag_sents(tok_sents)
         for pos_sent in pos_sents:
-            for chunk in nltk.ne_chunk(pos_sent):#, binary = True):
+            for chunk in nltk.ne_chunk(pos_sent, binary = True):
                 if type(chunk) is not nltk.Tree:
                     word, pos = chunk
                     # if pos == " ":  for further removal
