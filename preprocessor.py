@@ -91,9 +91,8 @@ class MongoDBLoader:
     
     def remove_named_entity(self, text):
         _text = list()
-        for idx, sent in enumerate(nltk.sent_tokenize(text)):
+        for sent in nltk.sent_tokenize(text):
             for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary = True):
-                #if hasattr(chunk, 'lab'):
                 if type(chunk) is not nltk.Tree:
                     word, pos = chunk
                     # if pos == " "  for further removal
