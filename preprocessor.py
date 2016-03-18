@@ -12,6 +12,7 @@ import nltk
 
 
 class MongoDBLoader:
+
     def __init__(self):
         """Set up connection."""
         print("Setting up connection...")
@@ -26,6 +27,7 @@ class MongoDBLoader:
             settings['MONGODB_SERVER'],
             settings['MONGODB_PORT']
         )
+
         self.db = connection[settings['MONGODB_DB']]
         self.filtered_collection = self.db[settings['MONGODB_FILTERED_COLLECTION']]
         self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
@@ -100,8 +102,6 @@ class MongoDBLoader:
                     # if pos == " ":  for further removal
                     _text.append(word)
                 else:
-                    #ne = ' '.join(c[0] for c in chunk.leaves())
-                    #self.named_entities.append(ne)
                     continue
         return ' '.join(_text)
 
