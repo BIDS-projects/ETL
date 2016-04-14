@@ -56,16 +56,16 @@ class MySQLBase(sad.declarative_base(), object):
         return self
 
 
-# class LinkItem(MySQLBase):
-#     """
-#     MySQL link object.
-#     """
+class LinkItem(MySQLBase):
+    """
+    MySQL link object.
+    """
 
-#     __tablename__ = 'links'
+    __tablename__ = 'links'
 
-#     base_url = sa.Column(sa.String(100))
-#     src_url = sa.Column(mysql.BLOB())
-#     links = sa.Column(sa.Text, nullable=False)
+    base_url = sa.Column(sa.String(100))
+    src_url = sa.Column(mysql.BLOB())
+    links = sa.Column(sa.Text, nullable=False)
 
 class FromItem(MySQLBase):
     """
@@ -89,6 +89,17 @@ class ToItem(MySQLBase):
     base_url = sa.Column(mysql.BLOB())
     from_id = sa.Column(sa.Integer, sa.ForeignKey(FromItem.id), nullable=False)
     from_item = relationship("FromItem", foreign_keys=[from_id])
+
+class ResearcherItem(MySQLBase):
+    """
+    MySQL Researcher object
+    """
+
+    _tablename_ = "researchers"
+
+    id = sa.Column(sa.Integer, primary_key = True)
+    base_url = sa.Column(mysql.BLOB())
+    name = sa.Column(mysql.BLOB())
 
 
 
