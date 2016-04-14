@@ -16,7 +16,6 @@ Options:
 from db import DomainItem, LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
 from fuzzywuzzy import process
-from nltk.tag.stanford import NERTagger
 from pymongo import MongoClient
 from sqlalchemy.orm import relationship
 from urlparse import urlparse
@@ -52,7 +51,7 @@ class MongoDBLoader:
             print("Setting up MySQL connection...")
             self.mySQL = MySQL(config=MySQLConfig)
 
-        faculty = open('researchers.csv', 'r')
+        faculty = open('researchers_alternative.csv', 'r')
         faculty = faculty.read()
         self.faculty = []
         for member in faculty.splitlines():
