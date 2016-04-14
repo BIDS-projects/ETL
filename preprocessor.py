@@ -124,30 +124,16 @@ class MongoDBLoader:
         # return text
 
     def extract_researchers(self, text):
-        # for sent in nltk.sent_tokenize(text):
-        #     for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary=False):
-        #         if hasattr(chunk, 'node'):
-        #             print chunk.node, ' '.join(c[0] for c in chunk.leaves())
-        # sentences = nltk.sent_tokenize(text)
-        # tokenized_sentences = [nltk.word_tokenize(sentence) for sentence in sentences]
-        # tagged_sentences = [nltk.pos_tag(sentence) for sentence in tokenized_sentences]
-        # chunked_sentences = nltk.ne_chunk(tagged_sentences, binary=True)
-        # print(chunked_sentences)
         researchers = []
-        # for idx, sent in enumerate(nltk.sent_tokenize(text)):
-        print nltk.pos_tag_sents(nltk.tokenize.sent_tokenize(text))
-
-        # chunks = nltk.ne_chunk(nltk.pos_tag_sents(nltk.tokenize.sent_tokenize(text)), binary=False)
-        # print(chunks)
-        # researchers.extend([chunk for chunk in chunks if hasattr(chunk, 'label') and 'label' == 'PERSON'])
-            # import pdb; pdb.set_trace()
-            # print chunks
-        # print researchers
-
-        # for tree in chunked_sentences:
-        #     if hasattr(t, 'label') and t.label:
-        #         if t.label() == 'NE':
-        #             print ' '.join([child[0] for child in t])
+        sentences = nltk.tokenize.sent_tokenize(text)
+        tokenized_sentences = [nltk.word_tokenize(sentence) for sentence in sentences]
+        tagged_sentences = nltk.pos_tag_sents(tokenized_sentences)
+        chunks = nltk.ne_chunk_sents(tagged_sentences, binary=False)
+        for chunk in chunks:
+            for sent in chunk:
+                if hasattr(sent, 'label') and sent.label:
+                    if sent.label() == 'PERSON':
+                        researchers.append(' '.join([child[0] for child in sent]))
 
     def remove_boilerplate(self, text):
         """
