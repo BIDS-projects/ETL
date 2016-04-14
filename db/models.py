@@ -95,7 +95,7 @@ class ResearcherItem(MySQLBase):
     MySQL Researcher object
     """
 
-    _tablename_ = "researchers"
+    __tablename__ = "researchers"
 
     id = sa.Column(sa.Integer, primary_key = True)
     base_url = sa.Column(mysql.BLOB())
