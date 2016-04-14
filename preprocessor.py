@@ -16,6 +16,7 @@ Options:
 from db import DomainItem, LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
 from fuzzywuzzy import process
+from nltk.tag.stanford import NERTagger
 from pymongo import MongoClient
 from sqlalchemy.orm import relationship
 from urlparse import urlparse
@@ -56,7 +57,13 @@ class MongoDBLoader:
         self.faculty = []
         for member in faculty.splitlines():
             self.faculty.append(member)
+<<<<<<< HEAD
         self.tolerance = 85
+=======
+
+        self.st = NERTagger('stanford-ner/all.3class.distsim.crf.ser.gz', 'stanford-ner/stanford-ner.jar')
+
+>>>>>>> ed0430d22f4a2e602623fb98bcfd7ef5d5f3df04
 
     def load_save(self):
         """
