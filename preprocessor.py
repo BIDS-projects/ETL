@@ -56,7 +56,7 @@ class MongoDBLoader:
         self.faculty = []
         for member in faculty.splitlines():
             self.faculty.append(member)
-
+        self.tolerance = 85
 
     def load_save(self):
         """
@@ -87,8 +87,8 @@ class MongoDBLoader:
                         from_item.to_items.append(ToItem(base_url=link))
                     from_item.save()
 
-                if self.options['--all'] or self.options['--researchers']:
-                    domain = DomainItem(domain=bytes(base_url))
+                # if self.options['--all'] or self.options['--researchers']:
+                #     domain = DomainItem(domain=bytes(base_url))
                     # researchers = self.clean(data['body'])
                     # for member in researchers:
                     #     if process.extractOne(researcher, self.faculty):
@@ -149,6 +149,12 @@ class MongoDBLoader:
                 if hasattr(sent, 'label') and sent.label:
                     if sent.label() == 'PERSON':
                         researchers.append(' '.join([child[0] for child in sent]))
+        try:
+            map(lambda researcher: process.extractOne(researcher, self.faculty), researchers)
+            researchers = [researcher[0] for researcher in researchers if researcher and researcher[1] >= self.tolerance]
+            print(researchers)
+        except Exception:
+            import pdb; pdb.set_trace()
 
     def remove_boilerplate(self, text):
         """
