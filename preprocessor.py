@@ -16,6 +16,7 @@ Options:
 from db import DomainItem, LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
 from fuzzywuzzy import process
+from nltk.tag.stanford import NERTagger
 from pymongo import MongoClient
 from sqlalchemy.orm import relationship
 from urlparse import urlparse
@@ -56,6 +57,8 @@ class MongoDBLoader:
         self.faculty = []
         for member in faculty.splitlines():
             self.faculty.append(member)
+
+        self.st = NERTagger('stanford-ner/all.3class.distsim.crf.ser.gz', 'stanford-ner/stanford-ner.jar')
 
 
     def load_save(self):
@@ -148,9 +151,12 @@ class MongoDBLoader:
         # tagged_sentences = [nltk.pos_tag(sentence) for sentence in tokenized_sentences]
         # chunked_sentences = nltk.ne_chunk(tagged_sentences, binary=True)
         # print(chunked_sentences)
-        researchers = []
+        for sent in nltk.sent_tokenize(text):
+            tokens = nltk.tokenize.word_tokenize(sent)
+            tags = self.st.tag(tokens)
+            for tag in tags:
+                if tag[1]=='PERSON': print tag
         # for idx, sent in enumerate(nltk.sent_tokenize(text)):
-        print nltk.pos_tag_sents(nltk.tokenize.sent_tokenize(text))
 
         # chunks = nltk.ne_chunk(nltk.pos_tag_sents(nltk.tokenize.sent_tokenize(text)), binary=False)
         # print(chunks)
