@@ -1,5 +1,9 @@
-pymongo
 jusText
 docopt
-pymysql
+fuzzywuzzy
+lxml
 nltk
+pymongo
+pymysql
+python-Levenshtein
+sqlalchemy

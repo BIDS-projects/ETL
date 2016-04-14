@@ -47,8 +47,9 @@ class MongoDBLoader:
         self.filtered_collection = self.db[settings['MONGODB_FILTERED_COLLECTION']]
         self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
 
-        print("Setting up MySQL connection...")
-        self.mySQL = MySQL(config=MySQLConfig)
+        if self.options['--all'] or self.options['--link']:
+            print("Setting up MySQL connection...")
+            self.mySQL = MySQL(config=MySQLConfig)
 
         faculty = open('researchers.csv', 'r')
         faculty = faculty.read()
@@ -110,7 +111,8 @@ class MongoDBLoader:
         words, e.g. geographical and date/time snippets.
         """
         text = self.remove_boilerplate(text)
-        text = self.remove_named_entity(text)
+        # text = self.remove_named_entity(text)
+        self.extract_researchers(text)
         return text
 
     def remove_named_entity(self, text):
@@ -119,7 +121,7 @@ class MongoDBLoader:
         """
         _text = list()
         for idx, sent in enumerate(nltk.sent_tokenize(text)):
-            for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary=True):
+            for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary=False):
                 # if hasattr(chunk, 'lab'):
                 if type(chunk) is not nltk.Tree:
                     word, pos = chunk
@@ -127,10 +129,40 @@ class MongoDBLoader:
                     _text.append(word)
                 else:
                     # ne = ' '.join(c[0] for c in chunk.leaves())
+                    if chunk.node == 'PERSON':
+                        for leaf in chunk.leaves():
+                            print(leaf[0])
                     # self.named_entities.append(ne)
+                    # print(ne)
                     continue
         return ' '.join(_text)
         # return text
+
+    def extract_researchers(self, text):
+        # for sent in nltk.sent_tokenize(text):
+        #     for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary=False):
+        #         if hasattr(chunk, 'node'):
+        #             print chunk.node, ' '.join(c[0] for c in chunk.leaves())
+        # sentences = nltk.sent_tokenize(text)
+        # tokenized_sentences = [nltk.word_tokenize(sentence) for sentence in sentences]
+        # tagged_sentences = [nltk.pos_tag(sentence) for sentence in tokenized_sentences]
+        # chunked_sentences = nltk.ne_chunk(tagged_sentences, binary=True)
+        # print(chunked_sentences)
+        researchers = []
+        # for idx, sent in enumerate(nltk.sent_tokenize(text)):
+        print nltk.pos_tag_sents(nltk.tokenize.sent_tokenize(text))
+
+        # chunks = nltk.ne_chunk(nltk.pos_tag_sents(nltk.tokenize.sent_tokenize(text)), binary=False)
+        # print(chunks)
+        # researchers.extend([chunk for chunk in chunks if hasattr(chunk, 'label') and 'label' == 'PERSON'])
+            # import pdb; pdb.set_trace()
+            # print chunks
+        # print researchers
+
+        # for tree in chunked_sentences:
+        #     if hasattr(t, 'label') and t.label:
+        #         if t.label() == 'NE':
+        #             print ' '.join([child[0] for child in t])
 
     def remove_boilerplate(self, text):
         """
