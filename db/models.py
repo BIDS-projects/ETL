@@ -90,6 +90,17 @@ class ToItem(MySQLBase):
     from_id = sa.Column(sa.Integer, sa.ForeignKey(FromItem.id), nullable=False)
     from_item = relationship("FromItem", foreign_keys=[from_id])
 
+class DomainItem(MySQLBase):
+    """
+    MySQL Domain Object
+    """
+
+    __tablename__ = "domains"
+
+    id = sa.Column(sa.Integer, primary_key = True)
+    domain = sa.Column(mysql.BLOB())
+    researchers = relationship("ResearcherItem", backref='domains', uselist=True)
+
 class ResearcherItem(MySQLBase):
     """
     MySQL Researcher object
@@ -98,9 +109,9 @@ class ResearcherItem(MySQLBase):
     __tablename__ = "researchers"
 
     id = sa.Column(sa.Integer, primary_key = True)
-    base_url = sa.Column(mysql.BLOB())
     name = sa.Column(mysql.BLOB())
-
+    domain_id = sa.Column(sa.Integer, sa.ForeignKey(DomainItem.id), nullable=False)
+    domain = relationship("DomainItem", foreign_keys=[domain_id])
 
 
 
