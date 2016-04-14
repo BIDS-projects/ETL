@@ -5,13 +5,14 @@ Reads from the MongoDB databse from the scraper, cleans the input, and writes
 to several MySQL databases for different analysis routes.
 
 Usage:
-    preprocessor.py [-a] [-l] [-t]
+    preprocessor.py [-a] [-l] [-r] [-t]
 
 Options:
-    -h --help  Display usage instructions.
-    -a --all   Runs all preprocessing steps.
-    -l --link  Runs the link processor for visualization.
-    -t --text  Runs the text processor for topic modeling.
+    -h --help           Display usage instructions.
+    -a --all            Runs all preprocessing steps.
+    -l --link           Runs the link processor for visualization.
+    -r --researchers    Runs the researcher extraction.
+    -t --text           Runs the text processor for topic modeling.
 """
 from db import DomainItem, LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
@@ -19,6 +20,7 @@ from fuzzywuzzy import process
 from pymongo import MongoClient
 from sqlalchemy.orm import relationship
 from urlparse import urlparse
+import codecs
 import justext
 import lxml
 import nltk
@@ -51,12 +53,17 @@ class MongoDBLoader:
             print("Setting up MySQL connection...")
             self.mySQL = MySQL(config=MySQLConfig)
 
-        faculty = open('researchers.csv', 'r')
+        faculty = codecs.open('researchers.csv', 'r', encoding='utf-8')
         faculty = faculty.read()
         self.faculty = []
         for member in faculty.splitlines():
             self.faculty.append(member)
         self.tolerance = 85
+
+        import sys
+
+        reload(sys)
+        sys.setdefaultencoding('utf8')
 
     def load_save(self):
         """
@@ -87,16 +94,8 @@ class MongoDBLoader:
                         from_item.to_items.append(ToItem(base_url=link))
                     from_item.save()
 
-                # if self.options['--all'] or self.options['--researchers']:
-                #     domain = DomainItem(domain=bytes(base_url))
-                    # researchers = self.clean(data['body'])
-                    # for member in researchers:
-                    #     if process.extractOne(researcher, self.faculty):
-                    #         researcher = domain.researchers.append(ResearcherItem(name=member))
-                    # domain.save()
-
+                text = self.clean(base_url, data['body'])
                 if self.options['--all'] or self.options['--text']:
-                    text = self.clean(data['body'])
                     self.filtered_collection.insert_one({
                         "base_url": base_url,
                         "src_url": src_url,
@@ -105,14 +104,21 @@ class MongoDBLoader:
                         "timestamp": timestamp
                     })
 
-    def clean(self, text):
+    def clean(self, base_url, text):
         """
         Cleans HTML text by removing boilerplates and filtering unnecessary
         words, e.g. geographical and date/time snippets.
         """
         text = self.remove_boilerplate(text)
         # text = self.remove_named_entity(text)
-        self.extract_researchers(text)
+
+        if self.options['--all'] or self.options['--researchers']:
+            domain = DomainItem(domain=bytes(base_url))
+            researchers = self.extract_researchers(text)
+            for researcher in researchers:
+                domain.researchers.append(ResearcherItem(name=researcher))
+            domain.save()
+
         return text
 
     def remove_named_entity(self, text):
@@ -149,12 +155,9 @@ class MongoDBLoader:
                 if hasattr(sent, 'label') and sent.label:
                     if sent.label() == 'PERSON':
                         researchers.append(' '.join([child[0] for child in sent]))
-        try:
-            map(lambda researcher: process.extractOne(researcher, self.faculty), researchers)
-            researchers = [researcher[0] for researcher in researchers if researcher and researcher[1] >= self.tolerance]
-            print(researchers)
-        except Exception:
-            import pdb; pdb.set_trace()
+        researchers = map(lambda researcher: process.extractOne(researcher, self.faculty), researchers)
+        researchers = [researcher[0] for researcher in researchers if researcher and researcher[1] >= self.tolerance]
+        return researchers
 
     def remove_boilerplate(self, text):
         """
