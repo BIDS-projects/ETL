@@ -16,10 +16,10 @@ Options:
 from db import DomainItem, LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
 from fuzzywuzzy import process
-from nltk.tag.stanford import NERTagger
 from pymongo import MongoClient
 from sqlalchemy.orm import relationship
 from urlparse import urlparse
+import codecs
 import justext
 import lxml
 import nltk
@@ -52,12 +52,20 @@ class MongoDBLoader:
             print("Setting up MySQL connection...")
             self.mySQL = MySQL(config=MySQLConfig)
 
-        faculty = open('researchers.csv', 'r')
-        faculty = faculty.read()
-        self.faculty = []
-        for member in faculty.splitlines():
-            self.faculty.append(member)
+        try:
+            faculty = codecs.open('researchers.csv', 'r', encoding='utf-8')
+            faculty = faculty.read()
+            self.faculty = []
+            for member in faculty.splitlines():
+                self.faculty.append(member)
+        except UnicodeDecodeError as err:
+            print err.object[err.start:err.end]
         self.tolerance = 85
+
+        import sys
+
+        reload(sys)
+        sys.setdefaultencoding('utf8')
 
     def load_save(self):
         """
