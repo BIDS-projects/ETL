@@ -41,6 +41,7 @@ class MongoDBLoader:
             settings['MONGODB_SERVER'],
             settings['MONGODB_PORT']
         )
+
         self.db = connection[settings['MONGODB_DB']]
         self.filtered_collection = self.db[settings['MONGODB_FILTERED_COLLECTION']]
         self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
@@ -57,7 +58,6 @@ class MongoDBLoader:
         for base_url in base_urls:
             print("Processing URL: %s" % base_url)
             for data in self.html_collection.find({"base_url": base_url}):
-
                 src_url = data['url']
                 tier = data['tier']
                 timestamp = data['timestamp']
@@ -96,7 +96,7 @@ class MongoDBLoader:
         text = self.remove_boilerplate(text)
         text = self.remove_named_entity(text)
         return text
-    
+
     def remove_named_entity(self, text):
         """
         Removes proper nouns (e.g. geographical locations).
