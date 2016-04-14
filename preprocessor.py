@@ -13,8 +13,9 @@ Options:
     -l --link  Runs the link processor for visualization.
     -t --text  Runs the text processor for topic modeling.
 """
-from db import LinkItem, MySQL, MySQLConfig, FromItem, ToItem
+from db import DomainItem, LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
+from fuzzywuzzy import process
 from pymongo import MongoClient
 from sqlalchemy.orm import relationship
 from urlparse import urlparse
@@ -49,6 +50,13 @@ class MongoDBLoader:
         print("Setting up MySQL connection...")
         self.mySQL = MySQL(config=MySQLConfig)
 
+        faculty = open('researchers.csv', 'r')
+        faculty = faculty.read()
+        self.faculty = []
+        for member in faculty.splitlines():
+            self.faculty.append(member)
+
+
     def load_save(self):
         """
         Loads in from MongoDB and saves to MySQL.
@@ -77,6 +85,14 @@ class MongoDBLoader:
                         link = urlparse(link).netloc
                         from_item.to_items.append(ToItem(base_url=link))
                     from_item.save()
+
+                if self.options['--all'] or self.options['--researchers']:
+                    domain = DomainItem(domain=bytes(base_url))
+                    # researchers = self.clean(data['body'])
+                    # for member in researchers:
+                    #     if process.extractOne(researcher, self.faculty):
+                    #         researcher = domain.researchers.append(ResearcherItem(name=member))
+                    # domain.save()
 
                 if self.options['--all'] or self.options['--text']:
                     text = self.clean(data['body'])
