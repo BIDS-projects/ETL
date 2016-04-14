@@ -112,9 +112,3 @@ class ResearcherItem(MySQLBase):
     name = sa.Column(mysql.BLOB())
     domain_id = sa.Column(sa.Integer, sa.ForeignKey(DomainItem.id), nullable=False)
     domain = relationship("DomainItem", foreign_keys=[domain_id])
-
-
-
-
-
-
