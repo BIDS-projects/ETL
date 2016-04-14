@@ -51,7 +51,7 @@ class MongoDBLoader:
             print("Setting up MySQL connection...")
             self.mySQL = MySQL(config=MySQLConfig)
 
-        faculty = open('researchers_alternative.csv', 'r')
+        faculty = open('researchers.csv', 'r')
         faculty = faculty.read()
         self.faculty = []
         for member in faculty.splitlines():
