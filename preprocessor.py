@@ -49,7 +49,7 @@ class MongoDBLoader:
         self.filtered_collection = self.db[settings['MONGODB_FILTERED_COLLECTION']]
         self.html_collection = self.db[settings['MONGODB_HTML_COLLECTION']]
 
-        if self.options['--all'] or self.options['--link']:
+        if self.options['--all'] or self.options['--link'] or self.options['--researchers']:
             print("Setting up MySQL connection...")
             self.mySQL = MySQL(config=MySQLConfig)
 
@@ -103,6 +103,7 @@ class MongoDBLoader:
                         "tier": tier,
                         "timestamp": timestamp
                     })
+            break
 
     def clean(self, base_url, text):
         """
@@ -116,8 +117,9 @@ class MongoDBLoader:
             domain = DomainItem(domain=bytes(base_url))
             researchers = self.extract_researchers(text)
             for researcher in researchers:
-                domain.researchers.append(ResearcherItem(name=researcher))
-            domain.save()
+                domain.researchers.append(ResearcherItem(name=bytes(researcher)))
+            if domain.researchers:
+                domain.save()
 
         return text
 

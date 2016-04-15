@@ -51,9 +51,12 @@ class MySQLBase(sad.declarative_base(), object):
         """
         Saves object to database.
         """
-        self.db.session.add(self)
-        self.db.session.commit()
-        return self
+        try:
+            self.db.session.add(self)
+            self.db.session.commit()
+            return self
+        except AttributeError:
+            import pdb; pdb.set_trace()
 
 
 class LinkItem(MySQLBase):
