@@ -59,17 +59,6 @@ class MySQLBase(sad.declarative_base(), object):
             import pdb; pdb.set_trace()
 
 
-class LinkItem(MySQLBase):
-    """
-    MySQL link object.
-    """
-
-    __tablename__ = 'links'
-
-    base_url = sa.Column(sa.String(100))
-    src_url = sa.Column(mysql.BLOB())
-    links = sa.Column(sa.Text, nullable=False)
-
 class FromItem(MySQLBase):
     """
     MySQL From object
@@ -93,25 +82,26 @@ class ToItem(MySQLBase):
     from_id = sa.Column(sa.Integer, sa.ForeignKey(FromItem.id), nullable=False)
     from_item = relationship("FromItem", foreign_keys=[from_id])
 
-class DomainItem(MySQLBase):
+class LinkItem(MySQLBase):
     """
-    MySQL Domain Object
+    MySQL link object.
     """
 
-    __tablename__ = "domains"
+    __tablename__ = 'links'
 
-    id = sa.Column(sa.Integer, primary_key = True)
-    domain = sa.Column(mysql.BLOB())
-    researchers = relationship("ResearcherItem", backref='domains', uselist=True)
+    id = sa.Column(sa.Integer, primary_key=True)
+    base_url = sa.Column(sa.String(100))
+    researchers = relationship("ResearcherItem", backref='links', uselist=True)
 
 class ResearcherItem(MySQLBase):
     """
     MySQL Researcher object
     """
 
-    __tablename__ = "researchers"
+    __tablename__ = "names"
 
-    id = sa.Column(sa.Integer, primary_key = True)
+    id = sa.Column(sa.Integer, primary_key=True)
     name = sa.Column(mysql.BLOB())
-    domain_id = sa.Column(sa.Integer, sa.ForeignKey(DomainItem.id), nullable=False)
-    domain = relationship("DomainItem", foreign_keys=[domain_id])
+    link_id = sa.Column(sa.Integer, sa.ForeignKey(LinkItem.id), nullable=False)
+    domain = sa.Column(sa.String(100))
+    link = relationship("LinkItem", foreign_keys=[link_id])

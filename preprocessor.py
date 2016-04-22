@@ -14,9 +14,8 @@ Options:
     -r --researchers    Runs the researcher extraction.
     -t --text           Runs the text processor for topic modeling.
 """
-from db import DomainItem, LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
+from db import LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
-from fuzzywuzzy import process
 from pymongo import MongoClient
 from sqlalchemy.orm import relationship
 from urlparse import urlparse
@@ -52,13 +51,6 @@ class MongoDBLoader:
         if self.options['--all'] or self.options['--link'] or self.options['--researchers']:
             print("Setting up MySQL connection...")
             self.mySQL = MySQL(config=MySQLConfig)
-
-        faculty = codecs.open('researchers.csv', 'r', encoding='utf-8')
-        faculty = faculty.read()
-        self.faculty = []
-        for member in faculty.splitlines():
-            self.faculty.append(member)
-        self.tolerance = 85
 
         import sys
 
@@ -103,7 +95,7 @@ class MongoDBLoader:
                         "tier": tier,
                         "timestamp": timestamp
                     })
-            break
+            
 
     def clean(self, base_url, text):
         """
@@ -114,12 +106,12 @@ class MongoDBLoader:
         # text = self.remove_named_entity(text)
 
         if self.options['--all'] or self.options['--researchers']:
-            domain = DomainItem(domain=bytes(base_url))
+            link = LinkItem(base_url=bytes(base_url))
             researchers = self.extract_researchers(text)
             for researcher in researchers:
-                domain.researchers.append(ResearcherItem(name=bytes(researcher)))
-            if domain.researchers:
-                domain.save()
+                link.researchers.append(ResearcherItem(name=bytes(researcher),domain=bytes(base_url)))
+            if link.researchers:
+                link.save()
 
         return text
 
@@ -157,8 +149,6 @@ class MongoDBLoader:
                 if hasattr(sent, 'label') and sent.label:
                     if sent.label() == 'PERSON':
                         researchers.append(' '.join([child[0] for child in sent]))
-        researchers = map(lambda researcher: process.extractOne(researcher, self.faculty), researchers)
-        researchers = [researcher[0] for researcher in researchers if researcher and researcher[1] >= self.tolerance]
         return researchers
 
     def remove_boilerplate(self, text):
