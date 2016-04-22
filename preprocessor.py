@@ -79,7 +79,6 @@ class MongoDBLoader:
                     continue
 
                 if self.options['--all'] or self.options['--link']:
-                    # import pdb; pdb.set_trace()
                     from_item = FromItem(base_url=bytes(base_url))
                     for link in links:
                         link = urlparse(link).netloc
@@ -95,7 +94,6 @@ class MongoDBLoader:
                         "tier": tier,
                         "timestamp": timestamp
                     })
-            
 
     def clean(self, base_url, text):
         """
@@ -103,7 +101,7 @@ class MongoDBLoader:
         words, e.g. geographical and date/time snippets.
         """
         text = self.remove_boilerplate(text)
-        # text = self.remove_named_entity(text)
+        text = self.remove_named_entity(text)
 
         if self.options['--all'] or self.options['--researchers']:
             link = LinkItem(base_url=bytes(base_url))
@@ -120,23 +118,20 @@ class MongoDBLoader:
         Removes proper nouns (e.g. geographical locations).
         """
         _text = list()
-        for idx, sent in enumerate(nltk.sent_tokenize(text)):
-            for chunk in nltk.ne_chunk(nltk.pos_tag(nltk.word_tokenize(sent)), binary=False):
-                # if hasattr(chunk, 'lab'):
+
+        tok_sents = [nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(text)]
+        pos_sents = nltk.pos_tag_sents(tok_sents)
+        chunked_sents = nltk.ne_chunk_sents(pos_sents, binary = True)
+
+        for sent in chunked_sents:
+            for chunk in sent:
                 if type(chunk) is not nltk.Tree:
                     word, pos = chunk
-                    # if pos == " ": # for further removal
+                    # if pos == " ":  for further removal
                     _text.append(word)
                 else:
-                    # ne = ' '.join(c[0] for c in chunk.leaves())
-                    if chunk.node == 'PERSON':
-                        for leaf in chunk.leaves():
-                            print(leaf[0])
-                    # self.named_entities.append(ne)
-                    # print(ne)
                     continue
         return ' '.join(_text)
-        # return text
 
     def extract_researchers(self, text):
         researchers = []
