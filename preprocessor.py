@@ -52,6 +52,16 @@ class MongoDBLoader:
             print("Setting up MySQL connection...")
             self.mySQL = MySQL(config=MySQLConfig)
 
+        # Initialize the perceptron for fast tagging
+        if self.options['--all'] or self.options['--researchers'] or self.options['--text']:
+            self.tagger = nltk.tag.perceptron.PerceptronTagger()
+
+        # Initialize the pickle
+        if self.options['--all'] or self.options['--researchers']:
+            self.chunker = nltk.data.load('chunkers/maxent_ne_chunker/english_ace_multiclass.pickle')
+        elif self.options['--text']:
+            self.chunker = nltk.data.load('chunkers/maxent_ne_chunker/english_ace_binary.pickle')
+
         import sys
 
         reload(sys)
@@ -85,7 +95,9 @@ class MongoDBLoader:
                         from_item.to_items.append(ToItem(base_url=link))
                     from_item.save()
 
-                text = self.clean(base_url, data['body'])
+                if self.options['--all'] or self.options['--researchers'] or self.options['--text']:
+                    text, researchers = self.clean(data['body'])
+
                 if self.options['--all'] or self.options['--text']:
                     self.filtered_collection.insert_one({
                         "base_url": base_url,
@@ -95,56 +107,49 @@ class MongoDBLoader:
                         "timestamp": timestamp
                     })
 
-    def clean(self, base_url, text):
+                if self.options['--all'] or self.options['--researchers']:
+                    link = LinkItem(base_url=bytes(base_url))
+                    for researcher in researchers:
+                        link.researchers.append(ResearcherItem(name=bytes(researcher), domain=bytes(base_url)))
+                    if link.researchers:
+                        link.save()
+
+    def clean(self, text):
         """
         Cleans HTML text by removing boilerplates and filtering unnecessary
         words, e.g. geographical and date/time snippets.
         """
         text = self.remove_boilerplate(text)
-        text = self.remove_named_entity(text)
-
-        if self.options['--all'] or self.options['--researchers']:
-            link = LinkItem(base_url=bytes(base_url))
-            researchers = self.extract_researchers(text)
-            for researcher in researchers:
-                link.researchers.append(ResearcherItem(name=bytes(researcher),domain=bytes(base_url)))
-            if link.researchers:
-                link.save()
-
-        return text
-
-    def remove_named_entity(self, text):
-        """
-        Removes proper nouns (e.g. geographical locations).
-        """
-        _text = list()
+        _text, researchers = [], []
 
         tok_sents = [nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(text)]
-        pos_sents = nltk.pos_tag_sents(tok_sents)
-        chunked_sents = nltk.ne_chunk_sents(pos_sents, binary = True)
+        pos_sents = [nltk.tag._pos_tag(sent, None, self.tagger) for sent in tok_sents]
+        chunked_sents = self.chunker.parse_sents(pos_sents)
 
         for sent in chunked_sents:
             for chunk in sent:
-                if type(chunk) is not nltk.Tree:
-                    word, pos = chunk
-                    # if pos == " ":  for further removal
-                    _text.append(word)
-                else:
-                    continue
-        return ' '.join(_text)
+                if self.options['--all'] or self.options['--text']:
+                    word = self.remove_named_entity(chunk)
+                    if word:
+                        _text.append(word)
+                if self.options['--all'] or self.options['--researchers']:
+                    resarcher = self.extract_researcher(chunk)
+                    if researcher:
+                        researchers.append(researcher)
+        return ' '.join(_text), researchers
 
-    def extract_researchers(self, text):
-        researchers = []
-        sentences = nltk.tokenize.sent_tokenize(text)
-        tokenized_sentences = [nltk.word_tokenize(sentence) for sentence in sentences]
-        tagged_sentences = nltk.pos_tag_sents(tokenized_sentences)
-        chunks = nltk.ne_chunk_sents(tagged_sentences, binary=False)
-        for chunk in chunks:
-            for sent in chunk:
-                if hasattr(sent, 'label') and sent.label:
-                    if sent.label() == 'PERSON':
-                        researchers.append(' '.join([child[0] for child in sent]))
-        return researchers
+    def remove_named_entity(self, chunk):
+        """
+        Removes proper nouns (e.g. geographical locations).
+        """
+        if type(chunk) is not nltk.Tree:
+            word, pos = chunk
+            return word
+
+    def extract_researcher(self, chunk):
+        if hasattr(chunk, 'label') and chunk.label:
+            if chunk.label() == 'PERSON':
+                return ' '.join([child[0] for child in sent])
 
     def remove_boilerplate(self, text):
         """
