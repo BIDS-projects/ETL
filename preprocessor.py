@@ -119,13 +119,12 @@ class MongoDBLoader:
         Cleans HTML text by removing boilerplates and filtering unnecessary
         words, e.g. geographical and date/time snippets.
         """
-        text = self.remove_boilerplate(text)
         _text, researchers = [], []
+        text = self.remove_boilerplate(text)
 
         tok_sents = [nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(text)]
         pos_sents = [nltk.tag._pos_tag(sent, None, self.tagger) for sent in tok_sents]
         chunked_sents = self.chunker.parse_sents(pos_sents)
-
         for sent in chunked_sents:
             for chunk in sent:
                 if self.options['--all'] or self.options['--text']:
@@ -136,20 +135,9 @@ class MongoDBLoader:
                     resarcher = self.extract_researcher(chunk)
                     if researcher:
                         researchers.append(researcher)
-        return ' '.join(_text), researchers
 
-    def remove_named_entity(self, chunk):
-        """
-        Removes proper nouns (e.g. geographical locations).
-        """
-        if type(chunk) is not nltk.Tree:
-            word, pos = chunk
-            return word
-
-    def extract_researcher(self, chunk):
-        if hasattr(chunk, 'label') and chunk.label:
-            if chunk.label() == 'PERSON':
-                return ' '.join([child[0] for child in sent])
+        text = self.remove_stop_words(_text)
+        return text, researchers
 
     def remove_boilerplate(self, text):
         """
@@ -159,6 +147,24 @@ class MongoDBLoader:
         cleaned = [line.text for line in jtext if not line.is_boilerplate]
         cleaned_text = " ".join(cleaned) if cleaned else ""
         return cleaned_text
+
+    def remove_named_entity(self, chunk):
+        """
+        Removes proper nouns (e.g. geographical locations).
+        """
+        if type(chunk) is not nltk.Tree:
+            word, pos = chunk
+            return word
+
+    def remove_stop_words(self, word_list):
+        filtered_words = [word for word in word_list if word not in nltk.corpus.stopwords.words('english')]
+        return ' '.join(filtered_words)
+
+    def extract_researcher(self, chunk):
+        if hasattr(chunk, 'label') and chunk.label:
+            if chunk.label() == 'PERSON':
+                return ' '.join([child[0] for child in sent])
+
 
 
 if __name__ == "__main__":
