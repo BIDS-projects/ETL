@@ -14,6 +14,7 @@ Options:
     -r --researchers    Runs the researcher extraction.
     -t --text           Runs the text processor for topic modeling.
 """
+from collections import defaultdict
 from db import LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
 from pymongo import MongoClient
@@ -27,7 +28,7 @@ import nltk
 
 class MongoDBLoader:
 
-    def __init__(self, options):
+    def __init__(self, options=defaultdict(lambda: True)):
         """
         Sets up connections to MongoDB and MySQL.
         """
@@ -67,65 +68,70 @@ class MongoDBLoader:
         reload(sys)
         sys.setdefaultencoding('utf8')
 
-    def load_save(self):
+    def process(self):
         """
-        Loads in from MongoDB and saves to MySQL.
+        Extract raw data from MongoDB and save transformed data to MySQL.
         """
         base_urls = self.html_collection.distinct("base_url")
         
         for base_url in base_urls:
             print("Processing URL: %s" % base_url)
             for data in self.html_collection.find({"base_url": base_url}):
-                src_url = data['url']
-                tier = data['tier']
-                timestamp = data['timestamp']
+                self.transform_and_load(data)
 
-                try:
-                    dom =  lxml.html.fromstring(data['body'])
-                    links = [link for link in dom.xpath('//a/@href')
-                        if link and 'http' in link and urlparse(link).netloc != base_url]
-                except ValueError:
-                    print("ERROR: Did not parse %s." % src_url)
-                    continue
+    def transform_and_load(self, data):
+        """ Transform the raw data into useful formats and load them into MySQL database"""
+        base_url = data['base_url']
+        src_url = data['url']
+        tier = data['tier']
+        timestamp = data['timestamp']
 
-                if self.options['--all'] or self.options['--link']:
-                    from_item = FromItem(base_url=bytes(base_url))
-                    for link in links:
-                        link = urlparse(link).netloc
-                        from_item.to_items.append(ToItem(base_url=link))
-                    from_item.save()
+        try:
+            dom =  lxml.html.fromstring(data['body'])
+            links = [link for link in dom.xpath('//a/@href')
+                if link and 'http' in link and urlparse(link).netloc != base_url]
+        except ValueError:
+            print("ERROR: Did not parse %s." % src_url)
+            return
 
-                if self.options['--all'] or self.options['--researchers'] or self.options['--text']:
-                    text, researchers = self.clean(data['body'])
+        if self.options['--all'] or self.options['--link']:
+            from_item = FromItem(base_url=bytes(base_url))
+            for link in links:
+                link = urlparse(link).netloc
+                from_item.to_items.append(ToItem(base_url=link))
+            from_item.save()
 
-                if self.options['--all'] or self.options['--text']:
-                    self.filtered_collection.insert_one({
-                        "base_url": base_url,
-                        "src_url": src_url,
-                        "text": text,
-                        "tier": tier,
-                        "timestamp": timestamp
-                    })
+        if self.options['--all'] or self.options['--researchers'] or self.options['--text']:
+            text, researchers = self.clean(data['body'])
 
-                if self.options['--all'] or self.options['--researchers']:
-                    link = LinkItem(base_url=bytes(base_url))
-                    for researcher in researchers:
-                        link.researchers.append(ResearcherItem(name=bytes(researcher), domain=bytes(base_url)))
-                    if link.researchers:
-                        link.save()
+        if self.options['--all'] or self.options['--text']:
+            self.filtered_collection.insert_one({
+                "base_url": base_url,
+                "src_url": src_url,
+                "text": text,
+                "tier": tier,
+                "timestamp": timestamp
+            })
+
+        if self.options['--all'] or self.options['--researchers']:
+            link = LinkItem(base_url=bytes(base_url))
+            for researcher in researchers:
+                link.researchers.append(ResearcherItem(name=bytes(researcher), domain=bytes(base_url)))
+            if link.researchers:
+                link.save()
+
 
     def clean(self, text):
         """
         Cleans HTML text by removing boilerplates and filtering unnecessary
         words, e.g. geographical and date/time snippets.
         """
-        text = self.remove_boilerplate(text)
         _text, researchers = [], []
+        text = self.remove_boilerplate(text)
 
         tok_sents = [nltk.word_tokenize(sent) for sent in nltk.sent_tokenize(text)]
         pos_sents = [nltk.tag._pos_tag(sent, None, self.tagger) for sent in tok_sents]
         chunked_sents = self.chunker.parse_sents(pos_sents)
-
         for sent in chunked_sents:
             for chunk in sent:
                 if self.options['--all'] or self.options['--text']:
@@ -136,20 +142,9 @@ class MongoDBLoader:
                     resarcher = self.extract_researcher(chunk)
                     if researcher:
                         researchers.append(researcher)
-        return ' '.join(_text), researchers
 
-    def remove_named_entity(self, chunk):
-        """
-        Removes proper nouns (e.g. geographical locations).
-        """
-        if type(chunk) is not nltk.Tree:
-            word, pos = chunk
-            return word
-
-    def extract_researcher(self, chunk):
-        if hasattr(chunk, 'label') and chunk.label:
-            if chunk.label() == 'PERSON':
-                return ' '.join([child[0] for child in sent])
+        text = self.remove_stop_words(_text)
+        return text, researchers
 
     def remove_boilerplate(self, text):
         """
@@ -160,7 +155,25 @@ class MongoDBLoader:
         cleaned_text = " ".join(cleaned) if cleaned else ""
         return cleaned_text
 
+    def remove_named_entity(self, chunk):
+        """
+        Removes proper nouns (e.g. geographical locations).
+        """
+        if type(chunk) is not nltk.Tree:
+            word, pos = chunk
+            return word
+
+    def remove_stop_words(self, word_list):
+        filtered_words = [word for word in word_list if word not in nltk.corpus.stopwords.words('english')]
+        return ' '.join(filtered_words)
+
+    def extract_researcher(self, chunk):
+        if hasattr(chunk, 'label') and chunk.label:
+            if chunk.label() == 'PERSON':
+                return ' '.join([child[0] for child in sent])
+
+
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
-    MongoDBLoader(arguments).load_save()
+    MongoDBLoader(arguments).process()
