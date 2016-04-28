@@ -14,6 +14,7 @@ Options:
     -r --researchers    Runs the researcher extraction.
     -t --text           Runs the text processor for topic modeling.
 """
+from collections import defaultdict
 from db import LinkItem, MySQL, MySQLConfig, FromItem, ResearcherItem, ToItem
 from docopt import docopt
 from pymongo import MongoClient
@@ -27,7 +28,7 @@ import nltk
 
 class MongoDBLoader:
 
-    def __init__(self, options):
+    def __init__(self, options=defaultdict(lambda: True)):
         """
         Sets up connections to MongoDB and MySQL.
         """
