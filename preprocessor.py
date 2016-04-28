@@ -67,52 +67,58 @@ class MongoDBLoader:
         reload(sys)
         sys.setdefaultencoding('utf8')
 
-    def load_save(self):
+    def process(self):
         """
-        Loads in from MongoDB and saves to MySQL.
+        Extract raw data from MongoDB and save transformed data to MySQL.
         """
         base_urls = self.html_collection.distinct("base_url")
         
         for base_url in base_urls:
             print("Processing URL: %s" % base_url)
             for data in self.html_collection.find({"base_url": base_url}):
-                src_url = data['url']
-                tier = data['tier']
-                timestamp = data['timestamp']
+                self.transform_and_load(data)
 
-                try:
-                    dom =  lxml.html.fromstring(data['body'])
-                    links = [link for link in dom.xpath('//a/@href')
-                        if link and 'http' in link and urlparse(link).netloc != base_url]
-                except ValueError:
-                    print("ERROR: Did not parse %s." % src_url)
-                    continue
+    def transform_and_load(self, data):
+        """ Transform the raw data into useful formats and load them into MySQL database"""
+        base_url = data['base_url']
+        src_url = data['url']
+        tier = data['tier']
+        timestamp = data['timestamp']
 
-                if self.options['--all'] or self.options['--link']:
-                    from_item = FromItem(base_url=bytes(base_url))
-                    for link in links:
-                        link = urlparse(link).netloc
-                        from_item.to_items.append(ToItem(base_url=link))
-                    from_item.save()
+        try:
+            dom =  lxml.html.fromstring(data['body'])
+            links = [link for link in dom.xpath('//a/@href')
+                if link and 'http' in link and urlparse(link).netloc != base_url]
+        except ValueError:
+            print("ERROR: Did not parse %s." % src_url)
+            return
 
-                if self.options['--all'] or self.options['--researchers'] or self.options['--text']:
-                    text, researchers = self.clean(data['body'])
+        if self.options['--all'] or self.options['--link']:
+            from_item = FromItem(base_url=bytes(base_url))
+            for link in links:
+                link = urlparse(link).netloc
+                from_item.to_items.append(ToItem(base_url=link))
+            from_item.save()
 
-                if self.options['--all'] or self.options['--text']:
-                    self.filtered_collection.insert_one({
-                        "base_url": base_url,
-                        "src_url": src_url,
-                        "text": text,
-                        "tier": tier,
-                        "timestamp": timestamp
-                    })
+        if self.options['--all'] or self.options['--researchers'] or self.options['--text']:
+            text, researchers = self.clean(data['body'])
 
-                if self.options['--all'] or self.options['--researchers']:
-                    link = LinkItem(base_url=bytes(base_url))
-                    for researcher in researchers:
-                        link.researchers.append(ResearcherItem(name=bytes(researcher), domain=bytes(base_url)))
-                    if link.researchers:
-                        link.save()
+        if self.options['--all'] or self.options['--text']:
+            self.filtered_collection.insert_one({
+                "base_url": base_url,
+                "src_url": src_url,
+                "text": text,
+                "tier": tier,
+                "timestamp": timestamp
+            })
+
+        if self.options['--all'] or self.options['--researchers']:
+            link = LinkItem(base_url=bytes(base_url))
+            for researcher in researchers:
+                link.researchers.append(ResearcherItem(name=bytes(researcher), domain=bytes(base_url)))
+            if link.researchers:
+                link.save()
+
 
     def clean(self, text):
         """
@@ -169,4 +175,4 @@ class MongoDBLoader:
 
 if __name__ == "__main__":
     arguments = docopt(__doc__)
-    MongoDBLoader(arguments).load_save()
+    MongoDBLoader(arguments).process()
